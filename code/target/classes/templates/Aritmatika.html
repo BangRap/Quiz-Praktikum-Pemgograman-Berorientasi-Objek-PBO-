@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Operasi Aritmatika</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Doto:wght@400;800;900&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --meja: #d3d8d0;
+            --tinta: #1d1f1e;
+            --redup: #5d645c;
+            --garis: #b9c0b6;
+            --lcd: #bccaa8;
+            --lcd-teks: #1d2817;
+            --lcd-redup: #4f6044;
+            --oranye: #ff6a14;
+            --oranye-tua: #b83f00;
+            --kertas: #fdfdfb;
+            --bahaya: #b3261e;
+            --font: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+            --lcd-font: 'Doto', ui-monospace, 'SF Mono', Menlo, monospace;
+        }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; }
+        body {
+            font-family: var(--font); font-size: 15px; color: var(--tinta);
+            background: var(--meja); min-height: 100vh;
+            -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums;
+        }
+        .halaman { max-width: 1040px; margin: 0 auto; padding: 44px 24px 56px; }
+
+        .kepala { display: flex; align-items: baseline; justify-content: space-between; gap: 12px 24px; flex-wrap: wrap; margin-bottom: 32px; }
+        .kepala h1 { margin: 0; font-size: clamp(28px, 4.5vw, 40px); font-weight: 800; letter-spacing: -.035em; line-height: 1; }
+        .kepala p { margin: 0; color: var(--redup); }
+
+        .tata { display: grid; grid-template-columns: 372px minmax(0, 1fr); gap: 40px; align-items: start; }
+
+        /* ===== ALAT KALKULATOR ===== */
+        .alat {
+            position: sticky; top: 24px;
+            padding: 16px 18px 24px; border-radius: 30px;
+            background: linear-gradient(180deg, #f8f9f6, #eceee9);
+            box-shadow: 0 1px 0 #fff inset, 0 -3px 0 rgba(30,36,28,.08) inset,
+                        0 2px 3px rgba(30,36,28,.25), 0 34px 50px -26px rgba(30,36,28,.6);
+        }
+        .status { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 30px; margin-bottom: 10px; padding: 0 4px; font-size: 13.5px; font-weight: 600; }
+        .status .led { display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: #9aa396; box-shadow: inset 0 1px 1px rgba(0,0,0,.25); }
+        .status .led.edit { background: var(--oranye); box-shadow: 0 0 8px var(--oranye); }
+        .status a { padding: 5px 12px; border-radius: 99px; color: var(--tinta); text-decoration: none; font-weight: 600; border: 1px solid var(--garis); }
+        .status a:hover { background: #fff; }
+        .status a:focus-visible { outline: 2px solid var(--oranye); outline-offset: 2px; }
+
+        /* Layar LCD */
+        .lcd {
+            padding: 8px 10px 10px; border-radius: 14px; color: var(--lcd-teks);
+            background: linear-gradient(180deg, #aebd9a, var(--lcd));
+            box-shadow: inset 0 3px 9px rgba(24,34,18,.4), inset 0 0 0 1px rgba(24,34,18,.28), 0 1px 0 #fff;
+        }
+        .pesan-salah { margin: 2px 2px 8px; padding: 8px 10px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--lcd); background: var(--lcd-teks); }
+        .lcd-baris { position: relative; padding: 6px 10px 4px; border-radius: 9px; cursor: text; transition: background .15s; }
+        .lcd-baris.aktif { background: rgba(24,34,18,.11); box-shadow: inset 3px 0 0 var(--lcd-teks); }
+        .lcd-label { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 600; color: var(--lcd-redup); }
+        .lcd-label label { cursor: inherit; }
+        .bantu { color: var(--bahaya); opacity: 0; transition: opacity .15s; }
+        .bantu.tampil { opacity: 1; }
+        .isi { display: flex; align-items: center; gap: 8px; }
+        .simbol { min-width: 28px; font-size: 32px; font-weight: 700; line-height: 1; color: var(--lcd-teks); }
+        .isian {
+            flex: 1; min-width: 0; width: 100%; height: 52px; padding: 0; border: 0; outline: none; background: transparent;
+            text-align: right; font-family: var(--lcd-font); font-size: 42px; font-weight: 900; letter-spacing: .01em; color: var(--lcd-teks);
+        }
+        .isian::placeholder { color: rgba(29,40,23,.22); }
+        .isian.salah { color: var(--bahaya); animation: getar .28s; }
+        @keyframes getar { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+
+        /* Tuts */
+        .tuts { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px 12px; margin-top: 22px; }
+        .tuts input[type=radio] { position: absolute; opacity: 0; pointer-events: none; width: 0; height: 0; }
+        .kunci {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            height: 58px; border: 0; border-radius: 29px; cursor: pointer; margin: 0; padding: 0;
+            font-family: var(--font); font-size: 24px; font-weight: 600; line-height: 1;
+            user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+            transition: transform .06s, box-shadow .06s;
+        }
+        .kunci:focus-visible { outline: 3px solid var(--oranye); outline-offset: 3px; }
+        .k-angka {
+            color: #f3f4f0; background: linear-gradient(180deg, #44473f 0%, #232523 100%);
+            box-shadow: 0 1px 0 rgba(255,255,255,.2) inset, 0 -3px 0 rgba(0,0,0,.35) inset, 0 4px 0 #0f1110, 0 9px 12px -4px rgba(0,0,0,.45);
+        }
+        .k-fungsi, .k-opr {
+            color: var(--tinta); background: linear-gradient(180deg, #eceee9, #cdd1c9);
+            box-shadow: 0 1px 0 #fff inset, 0 -3px 0 rgba(0,0,0,.13) inset, 0 4px 0 #9ea499, 0 9px 12px -4px rgba(0,0,0,.35);
+        }
+        .k-fungsi { font-size: 20px; }
+        .k-opr { font-size: 28px; font-weight: 500; }
+        .k-sama {
+            grid-column: span 2; font-size: 28px; color: #fff;
+            background: linear-gradient(180deg, #ff8744, var(--oranye));
+            box-shadow: 0 1px 0 rgba(255,255,255,.4) inset, 0 -3px 0 rgba(0,0,0,.14) inset, 0 4px 0 var(--oranye-tua), 0 9px 12px -4px rgba(120,40,0,.5);
+        }
+        .k-sama span { font-size: 16px; font-weight: 700; }
+        .kunci:active, .tuts input:checked + .k-opr {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 rgba(255,255,255,.12) inset, 0 -2px 0 rgba(0,0,0,.3) inset, 0 1px 0 rgba(0,0,0,.5), 0 3px 5px -2px rgba(0,0,0,.4);
+        }
+        .tuts input:checked + .k-opr { color: var(--oranye); background: linear-gradient(180deg, #3b3e3a, #232523); }
+        .tuts input:focus-visible + .k-opr { outline: 3px solid var(--oranye); outline-offset: 3px; }
+
+        /* ===== RIWAYAT (pita kertas) ===== */
+        .riwayat-kepala { display: flex; align-items: center; justify-content: space-between; margin: 0 2px 14px; }
+        .riwayat-kepala h2 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -.025em; }
+        .jumlah { padding: 4px 12px; border-radius: 99px; border: 1px solid var(--garis); color: var(--redup); font-size: 13px; font-weight: 600; }
+        .pita { filter: drop-shadow(0 14px 18px rgba(30,36,28,.2)); }
+        .tepi { height: 10px; background-color: var(--kertas); }
+        .tepi.atas { background-image: linear-gradient(135deg, var(--meja) 25%, transparent 25%), linear-gradient(225deg, var(--meja) 25%, transparent 25%); background-size: 14px 14px; background-position: 0 0; background-color: var(--kertas); }
+        .tepi.bawah { background-image: linear-gradient(315deg, var(--meja) 25%, transparent 25%), linear-gradient(45deg, var(--meja) 25%, transparent 25%); background-size: 14px 14px; }
+        .kertas { background: var(--kertas); }
+        .gulung { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        thead th { padding: 14px 10px 10px; font-size: 12.5px; font-weight: 600; color: var(--redup); white-space: nowrap; border-bottom: 2px solid var(--tinta); }
+        tbody td { padding: 14px 10px; border-bottom: 1px dashed var(--garis); font-size: 17px; }
+        tbody tr:last-child td { border-bottom: 0; }
+        tbody tr:hover { background: #f4f5f1; }
+        tbody tr.sedang { background: #fff1e6; }
+        tbody tr.sedang td:first-child { box-shadow: inset 4px 0 0 var(--oranye); }
+        .kanan { text-align: right; } .tengah { text-align: center; } .kiri { text-align: left; }
+        .no-id { width: 44px; color: var(--redup); font-size: 13.5px; }
+        .angka { font-weight: 500; }
+        .opr {
+            display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 50%;
+            font-size: 18px; font-weight: 700; color: var(--tinta); background: linear-gradient(180deg, #eceee9, #d5d9d1);
+            box-shadow: 0 1px 0 #fff inset, 0 2px 0 #a5ab9f;
+        }
+
+        .aksi { white-space: nowrap; }
+        .tombol-aksi {
+            display: inline-block; padding: 6px 11px; border-radius: 99px; cursor: pointer; text-decoration: none;
+            font-family: var(--font); font-size: 13.5px; font-weight: 600; color: var(--tinta);
+            background: transparent; border: 1px solid var(--garis); transition: background .12s, border-color .12s, color .12s;
+        }
+        .tombol-aksi:hover { background: #eceee9; border-color: var(--redup); }
+        .tombol-aksi:focus-visible { outline: 2px solid var(--oranye); outline-offset: 2px; }
+        .aksi-hapus { margin-left: 4px; }
+        .aksi-hapus:hover { background: #fdecea; border-color: var(--bahaya); color: var(--bahaya); }
+
+        .kosong { padding: 56px 20px !important; text-align: center; color: var(--redup); }
+        .kosong strong { display: block; margin-bottom: 4px; color: var(--tinta); font-size: 18px; }
+        .kaki { margin: 22px 2px 0; color: var(--redup); font-size: 13px; }
+
+        @media (max-width: 880px) {
+            .halaman { padding: 28px 14px 40px; }
+            .tata { grid-template-columns: 1fr; gap: 36px; }
+            .alat { position: static; max-width: 420px; width: 100%; margin: 0 auto; }
+            thead th, tbody td { padding-left: 10px; padding-right: 10px; }
+            tbody td { font-size: 16px; }
+            .no-id, thead th:first-child { display: none; }
+            .tombol-aksi { padding: 6px 10px; }
+        }
+        @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+    </style>
+</head>
+<body>
+
+    <div class="halaman">
+
+        <header class="kepala">
+            <h1>Operasi Aritmatika</h1>
+            <p>Masukkan dua bilangan, pilih operator, lalu tekan =</p>
+        </header>
+
+        <div class="tata">
+
+            <!-- ===== KALKULATOR ===== -->
+            <section class="alat" aria-label="Form operasi aritmatika">
+                <div class="status">
+                    <span th:if="${id == null}"><span class="led"></span>Operasi baru</span>
+                    <span th:if="${id != null}"><span class="led edit"></span><span th:text="'Edit operasi #' + ${id}">Edit operasi #1</span></span>
+                    <a th:if="${id != null}" th:href="@{/aritmatika}" href="#">Batal edit</a>
+                </div>
+
+                <form action="#" th:action="@{/aritmatika/simpan}" method="post" autocomplete="off">
+                    <input type="hidden" name="id" th:value="${id}" />
+
+                    <div class="lcd">
+                        <div class="pesan-salah" th:if="${pesan != null}" th:text="${pesan}" role="alert">Pesan kesalahan</div>
+
+                        <div class="lcd-baris" id="baris1">
+                            <div class="lcd-label"><label for="bil1">Bilangan 1</label><span class="bantu" id="bantu1">Hanya angka, tidak boleh huruf</span></div>
+                            <div class="isi">
+                                <input type="text" id="bil1" name="bilangan1" th:value="${bilangan1}" class="isian"
+                                       placeholder="0" inputmode="decimal" maxlength="16"
+                                       pattern="-?[0-9]{1,10}([.][0-9]{1,4})?" title="Harus berupa angka, tidak boleh huruf" required />
+                            </div>
+                        </div>
+
+                        <div class="lcd-baris" id="baris2">
+                            <div class="lcd-label"><label for="bil2">Bilangan 2</label><span class="bantu" id="bantu2">Hanya angka, tidak boleh huruf</span></div>
+                            <div class="isi">
+                                <span class="simbol" id="simbol" aria-hidden="true">+</span>
+                                <input type="text" id="bil2" name="bilangan2" th:value="${bilangan2}" class="isian"
+                                       placeholder="0" inputmode="decimal" maxlength="16"
+                                       pattern="-?[0-9]{1,10}([.][0-9]{1,4})?" title="Harus berupa angka, tidak boleh huruf" required />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tuts" role="group" aria-label="Tuts kalkulator">
+                        <button type="button" class="kunci k-fungsi" data-k="c" aria-label="Kosongkan semua">C</button>
+                        <button type="button" class="kunci k-fungsi" data-k="del" aria-label="Hapus satu karakter">&#9003;</button>
+                        <button type="button" class="kunci k-fungsi" data-k="pm" aria-label="Ganti tanda plus minus">&plusmn;</button>
+                        <input type="radio" name="operator" id="opt-bagi" value="/" th:checked="${operator == '/'}" />
+                        <label for="opt-bagi" class="kunci k-opr" title="Bagi">&divide;</label>
+
+                        <button type="button" class="kunci k-angka" data-k="7">7</button>
+                        <button type="button" class="kunci k-angka" data-k="8">8</button>
+                        <button type="button" class="kunci k-angka" data-k="9">9</button>
+                        <input type="radio" name="operator" id="opt-kali" value="*" th:checked="${operator == '*'}" />
+                        <label for="opt-kali" class="kunci k-opr" title="Kali">&times;</label>
+
+                        <button type="button" class="kunci k-angka" data-k="4">4</button>
+                        <button type="button" class="kunci k-angka" data-k="5">5</button>
+                        <button type="button" class="kunci k-angka" data-k="6">6</button>
+                        <input type="radio" name="operator" id="opt-kurang" value="-" th:checked="${operator == '-'}" />
+                        <label for="opt-kurang" class="kunci k-opr" title="Kurang">&minus;</label>
+
+                        <button type="button" class="kunci k-angka" data-k="1">1</button>
+                        <button type="button" class="kunci k-angka" data-k="2">2</button>
+                        <button type="button" class="kunci k-angka" data-k="3">3</button>
+                        <input type="radio" name="operator" id="opt-tambah" value="+" th:checked="${operator == '+'}" />
+                        <label for="opt-tambah" class="kunci k-opr" title="Tambah">+</label>
+
+                        <button type="button" class="kunci k-angka" data-k="0">0</button>
+                        <button type="button" class="kunci k-angka" data-k="." aria-label="Titik desimal">.</button>
+                        <button type="submit" class="kunci k-sama" title="Hitung dan simpan"><b>=</b><span>Simpan</span></button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- ===== RIWAYAT ===== -->
+            <section>
+                <div class="riwayat-kepala">
+                    <h2>Riwayat operasi</h2>
+                    <span class="jumlah" th:text="${listAritmatika.size()} + ' data'">0 data</span>
+                </div>
+                <div class="pita">
+                    <div class="tepi atas"></div>
+                    <div class="kertas gulung">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th class="tengah">ID</th>
+                                    <th class="kanan">Bilangan 1</th>
+                                    <th class="tengah">Operator</th>
+                                    <th class="kanan">Bilangan 2</th>
+                                    <th class="tengah">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="a : ${listAritmatika}" th:classappend="${id != null and id == a.id} ? 'sedang'">
+                                    <td class="tengah no-id" th:text="${a.id}">1</td>
+                                    <td class="kanan angka" th:text="${a.bilangan1Teks}">10</td>
+                                    <td class="tengah"><span class="opr"
+                                          th:text="${a.operator == '*' ? '×' : (a.operator == '/' ? '÷' : (a.operator == '-' ? '−' : a.operator))}">+</span></td>
+                                    <td class="kanan angka" th:text="${a.bilangan2Teks}">5</td>
+                                    <td class="tengah aksi">
+                                        <a th:href="@{/aritmatika/edit/{id}(id=${a.id})}" class="tombol-aksi">Edit</a>
+                                        <a th:href="@{/aritmatika/hapus/{id}(id=${a.id})}" class="tombol-aksi aksi-hapus"
+                                           onclick="return confirm('Yakin hapus data ini?')">Delete</a>
+                                    </td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(listAritmatika)}">
+                                    <td colspan="5" class="kosong"><strong>Belum ada operasi</strong>Isi dua bilangan di kalkulator lalu tekan = untuk menyimpan yang pertama.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="tepi bawah"></div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        var bil1 = document.getElementById('bil1');
+        var bil2 = document.getElementById('bil2');
+        var ops  = document.querySelectorAll('input[name="operator"]');
+        var simbol = document.getElementById('simbol');
+        var baris1 = document.getElementById('baris1');
+        var baris2 = document.getElementById('baris2');
+        var aktif = bil1;
+        var TAMPIL = { '+': '+', '-': '−', '*': '×', '/': '÷' };
+        var POLA = /^-?[0-9]{0,10}([.][0-9]{0,4})?$/;
+
+        function operatorDipilih() {
+            var c = document.querySelector('input[name="operator"]:checked');
+            return c ? c.value : '+';
+        }
+
+        // Perbarui simbol operator pada layar
+        function hitungForm() {
+            var op = operatorDipilih();
+            simbol.textContent = TAMPIL[op];
+        }
+
+        function tandai() {
+            baris1.classList.toggle('aktif', aktif === bil1);
+            baris2.classList.toggle('aktif', aktif === bil2);
+        }
+
+        function kedip(input, bantuId, pesan) {
+            var bantu = document.getElementById(bantuId);
+            var asli = bantu.textContent;
+            if (pesan) bantu.textContent = pesan;
+            input.classList.add('salah'); bantu.classList.add('tampil');
+            setTimeout(function () { input.classList.remove('salah'); bantu.classList.remove('tampil'); bantu.textContent = asli; }, 1600);
+        }
+
+        // Validasi: huruf langsung dibuang, hanya angka, minus, dan titik yang boleh
+        function saring(input, bantuId) {
+            var asli = input.value;
+            var bersih = asli.replace(/[^0-9.\-]/g, '');
+            if (bersih !== asli) {
+                input.value = bersih;
+                kedip(input, bantuId);
+            }
+            hitungForm();
+        }
+        bil1.addEventListener('input', function () { saring(bil1, 'bantu1'); });
+        bil2.addEventListener('input', function () { saring(bil2, 'bantu2'); });
+        [bil1, bil2].forEach(function (f) { f.addEventListener('focus', function () { aktif = f; tandai(); }); });
+        baris1.addEventListener('click', function () { bil1.focus(); });
+        baris2.addEventListener('click', function () { bil2.focus(); });
+
+        // Tuts kalkulator mengisi kolom yang sedang aktif
+        function tekan(k) {
+            var f = aktif, id = (f === bil1) ? 'bantu1' : 'bantu2', v = f.value, baru;
+            if (k === 'c') { bil1.value = ''; bil2.value = ''; aktif = bil1; hitungForm(); bil1.focus(); return; }
+            if (k === 'del') baru = v.slice(0, -1);
+            else if (k === 'pm') baru = v.charAt(0) === '-' ? v.slice(1) : '-' + v;
+            else if (k === '.') {
+                if (v.indexOf('.') !== -1) return;
+                baru = (v === '' ? '0' : (v === '-' ? '-0' : v)) + '.';
+            } else {
+                baru = (v === '0') ? k : (v === '-0' ? '-' + k : v + k);
+            }
+            if (!POLA.test(baru)) { kedip(f, id, 'Maksimal 10 digit dan 4 desimal'); return; }
+            f.value = baru;
+            hitungForm();
+            f.focus({ preventScroll: true });
+        }
+        document.querySelectorAll('[data-k]').forEach(function (b) {
+            b.addEventListener('mousedown', function (e) { e.preventDefault(); });
+            b.addEventListener('click', function () { tekan(b.dataset.k); });
+        });
+
+        // Pilih operator lewat tuts, lalu lanjut ke bilangan 2
+        ops.forEach(function (o) { o.addEventListener('change', hitungForm); });
+        document.querySelectorAll('label.k-opr').forEach(function (l) {
+            l.addEventListener('click', function () {
+                setTimeout(function () { (bil1.value !== '' ? bil2 : bil1).focus({ preventScroll: true }); }, 0);
+            });
+        });
+
+        // Di layar sentuh, pakai tuts di layar (bukan keyboard HP)
+        if (window.matchMedia && matchMedia('(pointer: coarse)').matches) {
+            bil1.setAttribute('inputmode', 'none'); bil2.setAttribute('inputmode', 'none');
+        }
+
+        hitungForm();
+        bil1.focus({ preventScroll: true });
+        tandai();
+
+    </script>
+</body>
+</html>
